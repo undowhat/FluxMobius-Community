@@ -1,0 +1,2369 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FluxMobius – 极简主义 AI Markdown 创作中心</title>
+    <meta name="description" content="FluxMobius 是一款本地优先的所见即所得 Markdown 创作中心。深度集成 AI 辅助，首创剪贴板四阶段架构，轻量级 Tauri 2.0 桌面端，为写作注入第二大脑。" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+      /* --- Design System & CSS Variables --- */
+      :root {
+        --bg-primary: #f5f5f7;
+        --bg-secondary: #ffffff;
+        --text-primary: #1d1d1f;
+        --text-secondary: #86868b;
+        --text-muted: #a1a1a6;
+        --accent: #0071e3;
+        --accent-rgb: 0, 113, 227;
+        --accent-gradient: linear-gradient(135deg, #0071e3, #a855f7);
+        --border: rgba(0, 0, 0, 0.08);
+        --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+        --card-hover-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
+        --glass-bg: rgba(255, 255, 255, 0.72);
+        --glass-border: rgba(255, 255, 255, 0.4);
+        --simulator-bg: #fdfdfd;
+        --simulator-sidebar: #f2f2f7;
+        --code-bg: #f5f5f7;
+        --code-text: #1d1d1f;
+        --neon-glow: rgba(0, 113, 227, 0.15);
+        --radius-lg: 24px;
+        --radius-md: 16px;
+        --radius-sm: 8px;
+        --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      }
+
+      [data-theme="dark"] {
+        --bg-primary: #000000;
+        --bg-secondary: #161617;
+        --text-primary: #f5f5f7;
+        --text-secondary: #86868b;
+        --text-muted: #6e6e73;
+        --accent: #2997ff;
+        --accent-rgb: 41, 151, 255;
+        --accent-gradient: linear-gradient(135deg, #2997ff, #bf5af2);
+        --border: rgba(255, 255, 255, 0.08);
+        --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        --card-hover-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+        --glass-bg: rgba(22, 22, 23, 0.72);
+        --glass-border: rgba(22, 22, 23, 0.4);
+        --simulator-bg: #1e1e1e;
+        --simulator-sidebar: #252528;
+        --code-bg: #2d2d2d;
+        --code-text: #e1e1e6;
+        --neon-glow: rgba(41, 151, 255, 0.25);
+      }
+
+      /* --- Base Reset --- */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+        font-size: 16px;
+      }
+
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        transition: background-color 0.5s ease, color 0.5s ease;
+        overflow-x: hidden;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+        transition: var(--transition);
+      }
+
+      /* --- Navigation --- */
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 64px;
+        background: var(--glass-bg);
+        backdrop-filter: saturate(180%) blur(20px);
+        -webkit-backdrop-filter: saturate(180%) blur(20px);
+        border-bottom: 1px solid var(--border);
+        z-index: 1000;
+        transition: var(--transition);
+      }
+
+      .nav-container {
+        max-width: 1200px;
+        height: 100%;
+        margin: 0 auto;
+        padding: 0 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .logo-group {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 700;
+        font-size: 1.25rem;
+        color: var(--text-primary);
+      }
+
+      .logo-icon {
+        width: 28px;
+        height: 28px;
+        fill: var(--text-primary);
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 2.5rem;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+      }
+
+      .nav-links a {
+        position: relative;
+        padding: 0.25rem 0;
+      }
+
+      .nav-links a::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 0;
+        height: 1.5px;
+        background: var(--accent);
+        transition: var(--transition);
+      }
+
+      .nav-links a:hover {
+        color: var(--text-primary);
+      }
+
+      .nav-links a:hover::after {
+        width: 100%;
+      }
+
+      .nav-right {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+      }
+
+      .theme-toggle {
+        background: none;
+        border: none;
+        cursor: pointer;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-primary);
+        background: var(--border);
+        transition: var(--transition);
+      }
+
+      .theme-toggle:hover {
+        transform: scale(1.05);
+      }
+
+      .nav-btn {
+        background: var(--text-primary);
+        color: var(--bg-secondary);
+        padding: 0.5rem 1.25rem;
+        border-radius: 99px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: var(--transition);
+      }
+
+      .nav-btn:hover {
+        transform: translateY(-1px);
+        opacity: 0.9;
+      }
+
+      /* --- Hero Section --- */
+      .hero {
+        padding: 160px 2rem 80px;
+        text-align: center;
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .hero-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1.25rem;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+        font-size: 0.8rem;
+        font-weight: 600;
+        border-radius: 999px;
+        margin-bottom: 2rem;
+        box-shadow: var(--card-shadow);
+      }
+
+      .hero-tag span {
+        width: 6px;
+        height: 6px;
+        background: #34c759;
+        border-radius: 50%;
+        display: inline-block;
+        box-shadow: 0 0 8px #34c759;
+      }
+
+      .hero h1 {
+        font-family: 'Outfit', sans-serif;
+        font-size: 4.5rem;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 1.1;
+        margin-bottom: 1.5rem;
+        color: var(--text-primary);
+      }
+
+      .hero h1 span.gradient {
+        background: var(--accent-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .hero p {
+        font-size: 1.35rem;
+        color: var(--text-secondary);
+        max-width: 720px;
+        margin: 0 auto 3rem;
+        line-height: 1.5;
+        font-weight: 400;
+      }
+
+      .cta-group {
+        display: flex;
+        gap: 1.25rem;
+        justify-content: center;
+        margin-bottom: 5rem;
+      }
+
+      .btn {
+        padding: 0.9rem 2.25rem;
+        border-radius: 99px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        box-shadow: var(--card-shadow);
+      }
+
+      .btn-primary {
+        background-color: var(--text-primary);
+        color: var(--bg-secondary);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+      }
+
+      .btn-secondary {
+        background-color: var(--bg-secondary);
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+      }
+
+      .btn-secondary:hover {
+        background-color: var(--bg-primary);
+        transform: translateY(-2px);
+      }
+
+      /* --- Interactive Simulator --- */
+      .simulator-container {
+        width: 100%;
+        max-width: 960px;
+        margin: 0 auto;
+        perspective: 1000px;
+      }
+
+      .simulator-tabs {
+        display: inline-flex;
+        background: var(--border);
+        padding: 0.35rem;
+        border-radius: 99px;
+        margin-bottom: 2rem;
+      }
+
+      .sim-tab-btn {
+        background: none;
+        border: none;
+        padding: 0.6rem 1.75rem;
+        border-radius: 99px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .sim-tab-btn.active {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        box-shadow: var(--card-shadow);
+      }
+
+      .simulator-window {
+        background: var(--simulator-bg);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: 0 30px 70px rgba(0, 0, 0, 0.12);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        height: 480px;
+        text-align: left;
+        transition: var(--transition);
+      }
+
+      [data-theme="dark"] .simulator-window {
+        box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
+      }
+
+      .window-header {
+        height: 44px;
+        background: var(--simulator-sidebar);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        padding: 0 1.25rem;
+        position: relative;
+      }
+
+      .traffic-lights {
+        display: flex;
+        gap: 8px;
+      }
+
+      .light {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+
+      .light.red { background-color: #ff5f56; }
+      .light.yellow { background-color: #ffbd2e; }
+      .light.green { background-color: #27c93f; }
+
+      .window-title {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+      }
+
+      .window-body {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      .window-sidebar {
+        width: 200px;
+        background: var(--simulator-sidebar);
+        border-right: 1px solid var(--border);
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .sidebar-title {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+      }
+
+      .sidebar-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .sidebar-list li {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+      }
+
+      .sidebar-list li.active {
+        background: var(--border);
+        color: var(--text-primary);
+        font-weight: 500;
+      }
+
+      .window-content {
+        flex: 1;
+        padding: 2rem;
+        overflow-y: auto;
+        position: relative;
+        font-family: 'Inter', sans-serif;
+      }
+
+      /* Simulator Animation Styles */
+      .typing {
+        border-right: 2px solid var(--accent);
+        white-space: pre-wrap;
+        animation: blink 0.75s step-end infinite;
+      }
+
+      @keyframes blink {
+        from, to { border-color: transparent }
+        50% { border-color: var(--accent); }
+      }
+
+      .sim-preview-h1 {
+        font-family: 'Outfit', sans-serif;
+        font-size: 2.25rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        color: var(--text-primary);
+        letter-spacing: -0.02em;
+      }
+
+      .sim-preview-p {
+        font-size: 1.05rem;
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+      }
+
+      .sim-preview-math {
+        background: var(--border);
+        padding: 1.25rem;
+        border-radius: var(--radius-md);
+        text-align: center;
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.35rem;
+        margin: 1.5rem 0;
+        box-shadow: var(--card-shadow);
+        border: 1px dashed var(--accent);
+        opacity: 0;
+        transform: translateY(10px);
+        animation: fadeInUp 0.5s forwards;
+      }
+
+      .sim-ai-selection {
+        background-color: rgba(168, 85, 247, 0.15);
+        border-bottom: 2px dashed #a855f7;
+        position: relative;
+      }
+
+      .sim-ai-toolbar {
+        position: absolute;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        border-radius: var(--radius-sm);
+        padding: 0.35rem;
+        display: flex;
+        gap: 0.25rem;
+        top: -45px;
+        left: 20px;
+        opacity: 0;
+        transform: scale(0.95);
+        animation: popIn 0.3s forwards 0.5s;
+        z-index: 50;
+      }
+
+      .sim-ai-btn {
+        background: none;
+        border: none;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        color: var(--text-primary);
+      }
+
+      .sim-ai-btn.highlight {
+        background: var(--accent-gradient);
+        color: white;
+      }
+
+      .sim-ai-chat-bubble {
+        background: var(--border);
+        border-radius: var(--radius-md);
+        padding: 1.25rem;
+        margin-top: 1.5rem;
+        font-size: 0.95rem;
+        border-left: 4px solid #a855f7;
+        opacity: 0;
+        transform: translateY(10px);
+        animation: fadeInUp 0.5s forwards;
+      }
+
+      .sim-ai-streaming {
+        color: var(--text-primary);
+        font-weight: 500;
+      }
+
+      .sim-ai-glow {
+        background: linear-gradient(90deg, #a855f7, #6366f1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 600;
+      }
+
+      /* Paste layout */
+      .sim-paste-grid {
+        display: flex;
+        gap: 1.5rem;
+        height: 100%;
+        align-items: center;
+      }
+
+      .sim-paste-col {
+        flex: 1;
+        background: var(--border);
+        border-radius: var(--radius-md);
+        padding: 1rem;
+        height: 80%;
+        display: flex;
+        flex-direction: column;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.75rem;
+        overflow: hidden;
+      }
+
+      .sim-paste-col.right {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        font-family: inherit;
+        font-size: inherit;
+      }
+
+      .col-title {
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+      }
+
+      .sim-paste-node {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      .sim-paste-flow-arrow {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+      }
+
+      .arrow-pipe {
+        width: 48px;
+        height: 48px;
+        background: var(--border);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .arrow-pipe::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: var(--accent-gradient);
+        opacity: 0.1;
+      }
+
+      .pipe-pulse {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background: var(--accent);
+        border-radius: 50%;
+        box-shadow: 0 0 10px var(--accent);
+        animation: pipeFlow 1.5s infinite linear;
+      }
+
+      @keyframes pipeFlow {
+        0% { transform: translateX(-30px); opacity: 0; }
+        50% { opacity: 1; }
+        100% { transform: translateX(30px); opacity: 0; }
+      }
+
+      .paste-clean-indicator {
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: #ff3b30;
+        background: rgba(255,59,48,0.1);
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+        margin-bottom: 0.25rem;
+        text-align: center;
+        animation: flashRed 1s infinite alternate;
+      }
+
+      @keyframes flashRed {
+        from { opacity: 0.4; }
+        to { opacity: 1; }
+      }
+
+      @keyframes fadeInUp {
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @keyframes popIn {
+        to { opacity: 1; transform: scale(1); }
+      }
+
+      /* --- Bento Grid Section --- */
+      .section {
+        padding: 100px 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .section-header {
+        text-align: center;
+        margin-bottom: 4.5rem;
+      }
+
+      .section-header h2 {
+        font-family: 'Outfit', sans-serif;
+        font-size: 3rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin-bottom: 1rem;
+        color: var(--text-primary);
+      }
+
+      .section-header p {
+        font-size: 1.15rem;
+        color: var(--text-secondary);
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .bento-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-auto-rows: 280px;
+        gap: 1.5rem;
+      }
+
+      .bento-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 2.25rem;
+        box-shadow: var(--card-shadow);
+        transition: var(--transition);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .bento-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--card-hover-shadow);
+        border-color: rgba(var(--accent-rgb), 0.2);
+      }
+
+      .bento-card-large {
+        grid-column: span 2;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 2rem;
+      }
+
+      .bento-card-large .bento-info {
+        flex: 1.2;
+        max-width: 60%;
+      }
+
+      .bento-card-tall {
+        grid-row: span 2;
+        justify-content: space-between;
+      }
+
+      .bento-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius-sm);
+        background: var(--bg-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+        color: var(--accent);
+        transition: var(--transition);
+      }
+
+      .bento-card:hover .bento-icon {
+        background: var(--accent-gradient);
+        color: white;
+      }
+
+      .bento-info {
+        z-index: 2;
+      }
+
+      .bento-card h3 {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.35rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+      }
+
+      .bento-card p {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+      }
+
+      /* Bento Graphic Inline Containers */
+      .bento-graphic-container {
+        flex: 0.8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 140px;
+        z-index: 2;
+      }
+
+      /* Dual Engine Graphics */
+      .graphic-dual-engine-inline {
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+        width: 100%;
+        max-width: 280px;
+        box-shadow: var(--card-shadow);
+      }
+
+      .segmented-control {
+        background: var(--border);
+        border-radius: 99px;
+        padding: 3px;
+        display: flex;
+        width: 100%;
+        position: relative;
+      }
+
+      .control-btn {
+        flex: 1;
+        padding: 0.45rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-align: center;
+        color: var(--text-secondary);
+        border-radius: 99px;
+        z-index: 2;
+        transition: var(--transition);
+        border: none;
+        background: none;
+      }
+
+      .control-btn.active {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      }
+
+      .engine-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+      }
+
+      .status-indicator-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #34c759;
+        box-shadow: 0 0 6px #34c759;
+      }
+
+      /* Workspace Graphic Inline */
+      .graphic-workspace-inline {
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 100%;
+        margin-top: 1.5rem;
+        box-shadow: var(--card-shadow);
+        z-index: 2;
+      }
+
+      .ws-header {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.5rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .ws-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+      .ws-dot.red { background: #ff5f56; }
+      .ws-dot.yellow { background: #ffbd2e; }
+      .ws-dot.green { background: #27c93f; }
+
+      .ws-tree {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.75rem;
+      }
+
+      .ws-item {
+        padding: 0.35rem 0.5rem;
+        border-radius: 4px;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .ws-item.active {
+        background: var(--border);
+        color: var(--text-primary);
+        font-weight: 500;
+      }
+
+      .ws-active-tag {
+        font-size: 0.6rem;
+        background: var(--accent);
+        color: white;
+        padding: 0.05rem 0.3rem;
+        border-radius: 3px;
+      }
+
+      .ws-indent-1 { margin-left: 1rem; }
+      .ws-indent-2 { margin-left: 2rem; }
+
+      /* Pandoc Graphic Inline */
+      .graphic-pandoc-inline {
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        width: 100%;
+        max-width: 320px;
+        box-shadow: var(--card-shadow);
+      }
+
+      .converter-badge {
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-align: center;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      }
+
+      .converter-badge.word {
+        background: #e1f5fe;
+        color: #0288d1;
+        border: 1px solid #b3e5fc;
+      }
+
+      .converter-badge.md {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        border: 1px solid var(--border);
+      }
+
+      .converter-badge.pdf {
+        background: #ffebee;
+        color: #c62828;
+        border: 1px solid #ffcdd2;
+      }
+
+      .converter-arrow {
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+      }
+
+      /* Formula Graphic Watermark */
+      .graphic-formula-watermark {
+        position: absolute;
+        bottom: 10px;
+        right: 15px;
+        font-family: 'Outfit', sans-serif;
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        opacity: 0.04;
+        pointer-events: none;
+      }
+
+      /* Deep Dive Sections */
+      .deep-dive {
+        background-color: var(--bg-secondary);
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .deep-dive-grid {
+        display: grid;
+        grid-template-columns: 1fr 1.2fr;
+        gap: 4rem;
+        align-items: center;
+      }
+
+      .deep-dive-content h3 {
+        font-family: 'Outfit', sans-serif;
+        font-size: 2.25rem;
+        font-weight: 800;
+        margin-bottom: 1.5rem;
+        color: var(--text-primary);
+        letter-spacing: -0.02em;
+      }
+
+      .deep-dive-content p {
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+        line-height: 1.7;
+      }
+
+      .deep-dive-steps {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .deep-dive-step {
+        display: flex;
+        gap: 1.25rem;
+      }
+
+      .step-number {
+        width: 32px;
+        height: 32px;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 700;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+        color: var(--accent);
+      }
+
+      .step-info h4 {
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 0.25rem;
+        color: var(--text-primary);
+      }
+
+      .step-info p {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin-bottom: 0;
+      }
+
+      /* Interactive Flow diagram for Clipboard Architecture */
+      .flow-diagram-container {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        background: var(--bg-primary);
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .flow-step-pill {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: var(--transition);
+        cursor: pointer;
+      }
+
+      .flow-step-pill.active {
+        border-color: var(--accent);
+        box-shadow: 0 0 15px var(--neon-glow);
+        transform: translateX(5px);
+      }
+
+      .flow-step-pill:hover:not(.active) {
+        transform: translateY(-2px);
+      }
+
+      .flow-step-badge {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--accent-gradient);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      .flow-step-text h5 {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .flow-step-text p {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        margin: 0;
+      }
+
+      .flow-status-panel {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 1.25rem;
+        font-size: 0.8rem;
+      }
+
+      .flow-status-header {
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #34c759;
+        display: inline-block;
+      }
+
+      .flow-status-code {
+        font-family: 'JetBrains Mono', monospace;
+        color: var(--code-text);
+        background: var(--code-bg);
+        padding: 0.75rem;
+        border-radius: var(--radius-sm);
+        margin-top: 0.5rem;
+        overflow-x: auto;
+      }
+
+      /* --- Performance Section --- */
+      .perf-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 4rem;
+        align-items: center;
+      }
+
+      .perf-charts {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+      }
+
+      .chart-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .chart-title {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .chart-bar-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+
+      .chart-bar-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .chart-label {
+        width: 100px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+      }
+
+      .chart-bar-wrapper {
+        flex: 1;
+        height: 16px;
+        background: var(--border);
+        border-radius: 99px;
+        overflow: hidden;
+      }
+
+      .chart-bar-fill {
+        height: 100%;
+        border-radius: 99px;
+        width: 0;
+        transition: width 1.5s cubic-bezier(0.1, 1, 0.1, 1);
+      }
+
+      .chart-bar-fill.tauri {
+        background: var(--accent-gradient);
+      }
+
+      .chart-bar-fill.electron {
+        background: var(--text-muted);
+      }
+
+      .chart-value {
+        width: 60px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        text-align: right;
+      }
+
+      /* --- Download Center --- */
+      .download-section {
+        background: var(--bg-secondary);
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        text-align: center;
+      }
+
+      .download-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+        margin-top: 3rem;
+      }
+
+      .download-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 3rem 2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        transition: var(--transition);
+      }
+
+      .download-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--card-hover-shadow);
+        background: var(--bg-secondary);
+      }
+
+      .os-icon {
+        width: 56px;
+        height: 56px;
+        fill: var(--text-primary);
+        margin-bottom: 1.5rem;
+      }
+
+      .download-card h3 {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+      }
+
+      .download-card p {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+      }
+
+      .download-card .btn {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .pandoc-tip {
+        margin-top: 3.5rem;
+        padding: 1.5rem;
+        background: rgba(var(--accent-rgb), 0.04);
+        border: 1px solid rgba(var(--accent-rgb), 0.1);
+        border-radius: var(--radius-md);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        max-width: 720px;
+        text-align: left;
+      }
+
+      .pandoc-tip code {
+        font-family: 'JetBrains Mono', monospace;
+        background: var(--border);
+        padding: 0.1rem 0.35rem;
+        border-radius: 4px;
+        color: var(--text-primary);
+      }
+
+      /* --- Footer --- */
+      footer {
+        padding: 80px 2rem;
+        text-align: center;
+        background-color: var(--bg-primary);
+      }
+
+      .footer-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2rem;
+      }
+
+      .footer-links {
+        display: flex;
+        justify-content: center;
+        gap: 3rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+      }
+
+      .footer-links a:hover {
+        color: var(--text-primary);
+      }
+
+      .copyright {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+      }
+
+      /* --- Animations & Utilities --- */
+      .scroll-reveal {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.8s ease, transform 0.8s ease;
+      }
+
+      .scroll-reveal.revealed {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* --- Responsive Breakpoints --- */
+      @media (max-width: 1024px) {
+        .bento-grid {
+          grid-template-columns: repeat(2, 1fr);
+          grid-auto-rows: 260px;
+        }
+        .bento-card-large {
+          grid-column: span 2;
+        }
+        .deep-dive-grid, .perf-grid {
+          grid-template-columns: 1fr;
+          gap: 3rem;
+        }
+        .download-grid {
+          grid-template-columns: 1fr;
+          max-width: 480px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+        .hero h1 {
+          font-size: 3.5rem;
+        }
+      }
+
+      @media (max-width: 768px) {
+        html { font-size: 14px; }
+        .bento-grid {
+          grid-template-columns: 1fr;
+          grid-auto-rows: auto;
+        }
+        .bento-card-large {
+          grid-column: span 1;
+        }
+        .nav-links {
+          display: none; /* Mobile navigation simplified */
+        }
+        .window-sidebar {
+          display: none; /* Hide simulator sidebar on mobile */
+        }
+        .hero h1 {
+          font-size: 2.8rem;
+        }
+        .hero p {
+          font-size: 1.15rem;
+        }
+        .cta-group {
+          flex-direction: column;
+          width: 100%;
+          max-width: 280px;
+        }
+        .btn {
+          width: 100%;
+          justify-content: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav>
+      <div class="nav-container">
+        <div class="logo-group">
+          <!-- abstract Moebius logo SVG -->
+          <svg class="logo-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <path d="M50 15 C 20 15, 10 35, 10 50 C 10 65, 20 85, 50 85 C 80 85, 90 65, 90 50 C 90 35, 80 15, 50 15 Z M 50 25 C 72 25, 80 40, 80 50 C 80 60, 72 75, 50 75 C 28 75, 20 60, 20 50 C 20 40, 28 25, 50 25 Z" fill-rule="evenodd"/>
+            <path d="M30 50 Q 50 20 70 50 T 30 50" fill="none" stroke-width="6" stroke="url(#logo-grad)"/>
+            <defs>
+              <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#0071e3" />
+                <stop offset="100%" stop-color="#a855f7" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <span>FluxMobius</span>
+        </div>
+        <div class="nav-links">
+          <a href="#features">特性列表</a>
+          <a href="#clipboard-deepdive">剪贴板机制</a>
+          <a href="#ai-deepdive">AI 写作</a>
+          <a href="#performance">硬核性能</a>
+          <a href="https://github.com/undowhat/FluxMobius-Community">GitHub</a>
+        </div>
+        <div class="nav-right">
+          <button id="theme-toggle-btn" class="theme-toggle" aria-label="切换主题" title="切换亮暗色模式">
+            <!-- SVG moon for default state -->
+            <svg id="moon-icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"></path>
+            </svg>
+            <svg id="sun-icon" style="display: none;" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m0 13.5V21m8.966-8.966h-2.25M4.25 12h-2.25m15.364-6.364l-1.591 1.591M6.364 17.636l-1.591 1.591m12.728 0l-1.591-1.591M6.364 6.364l-1.591-1.591M12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z"></path>
+            </svg>
+          </button>
+          <a href="#download" class="nav-btn">立即下载</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main -->
+    <main>
+      <!-- Hero Section -->
+      <section class="hero">
+        <div class="hero-tag">
+          <span></span>
+          FluxMobius 2.0.0 发布 – 开启本地 Markdown 创作新纪元
+        </div>
+        <h1>极简至臻。<br><span class="gradient">智慧流转。</span></h1>
+        <p>基于 Tauri 2.0 构建的本地优先笔记工作站。深度集成上下文 AI 辅助，首创“四阶段剪贴板架构”，为极客与专业写作者定制极度纯净、又无限智能的创作体验。</p>
+        
+        <div class="cta-group">
+          <a href="#download" class="btn btn-primary">
+            <!-- download SVG -->
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path>
+            </svg>
+            免费下载桌面端
+          </a>
+          <a href="https://github.com/undowhat/FluxMobius-Community" class="btn btn-secondary" target="_blank" rel="noopener noreferrer">
+            <!-- Github SVG -->
+            <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+            </svg>
+            GitHub 开源仓库
+          </a>
+        </div>
+
+        <!-- Interactive Simulator Widget -->
+        <div class="simulator-container scroll-reveal">
+          <div class="simulator-tabs">
+            <button id="tab-wysiwyg" class="sim-tab-btn active" onclick="switchSimulatorTab('wysiwyg')">
+              ✍️ 沉浸编辑 (WYSIWYG)
+            </button>
+            <button id="tab-ai" class="sim-tab-btn" onclick="switchSimulatorTab('ai')">
+              ✨ AI 选区润色
+            </button>
+            <button id="tab-paste" class="sim-tab-btn" onclick="switchSimulatorTab('paste')">
+              📋 智能剪贴板
+            </button>
+          </div>
+
+          <div class="simulator-window">
+            <div class="window-header">
+              <div class="traffic-lights">
+                <span class="light red"></span>
+                <span class="light yellow"></span>
+                <span class="light green"></span>
+              </div>
+              <div class="window-title" id="sim-window-title">FluxMobius — docs/Welcome.md</div>
+            </div>
+            <div class="window-body">
+              <div class="window-sidebar">
+                <div class="sidebar-title">本地工作区</div>
+                <ul class="sidebar-list">
+                  <li id="sim-file-welcome" class="active" onclick="switchSimFile('welcome')">📝 Welcome.md</li>
+                  <li id="sim-file-math" onclick="switchSimFile('math')">📝 Math_Notes.md</li>
+                  <li id="sim-file-code" onclick="switchSimFile('code')">📝 Sandbox.py</li>
+                </ul>
+              </div>
+              <div class="window-content" id="simulator-content">
+                <!-- Content injected dynamically via script -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Bento Grid Feature Section -->
+      <section id="features" class="section scroll-reveal">
+        <div class="section-header">
+          <h2>精雕细琢，面面俱到</h2>
+          <p>摒弃堆砌，保留核心。每一个模块都经过反复打磨，力求功能与美感的极致平衡。</p>
+        </div>
+
+        <div class="bento-grid">
+          <!-- Card 1: Dual Engine (Large) -->
+          <div class="bento-card bento-card-large">
+            <div class="bento-info">
+              <div class="bento-icon">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"></path>
+                </svg>
+              </div>
+              <h3>沉浸式双引擎架构</h3>
+              <p>日常写作享有极致所见即所得体验；当遇到超大文件时，系统自动无缝切换至高能源码模式，确保检索与编辑流畅无阻。</p>
+            </div>
+            <div class="bento-graphic-container">
+              <div class="graphic-dual-engine-inline">
+                <div class="segmented-control">
+                  <span class="control-btn active">Milkdown (所见即所得)</span>
+                  <span class="control-btn">CodeMirror 6</span>
+                </div>
+                <div class="engine-status">
+                  <span class="status-indicator-dot"></span>
+                  <span>内核自适应切换已就绪</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Local Workspace (Tall, Row 1 & 2, Col 3) -->
+          <div class="bento-card bento-card-tall">
+            <div class="bento-info">
+              <div class="bento-icon">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-19.5 0A2.25 2.25 0 004.5 15h15a2.25 2.25 0 002.25-2.25m-19.5 0v.25A2.25 2.25 0 004.5 15.25h15a2.25 2.25 0 002.25-2.25v-.25M9 3h.75a2.25 2.25 0 012.25 2.25v.84M7.5 10.5h.008v.008H7.5v-.008zm3 0h.008v.008h-.008v-.008zm0 6h.008v.008h-.008v-.008zm-3 0h.008v.008H7.5v-.008z"></path>
+                </svg>
+              </div>
+              <h3>本地优先，虚拟工作区</h3>
+              <p>直接关联本地任意物理文件夹，文档即数据。首创虚拟工作区，无需改动磁盘目录结构即可对文档进行拖拽、归类和重命名。</p>
+            </div>
+            
+            <div class="graphic-workspace-inline">
+              <div class="ws-header">
+                <span class="ws-dot red"></span>
+                <span class="ws-dot yellow"></span>
+                <span class="ws-dot green"></span>
+                <span style="font-size:0.65rem; color:var(--text-secondary); margin-left:0.5rem; font-weight:600;">工作区</span>
+              </div>
+              <div class="ws-tree">
+                <div class="ws-item">📂 Drafts</div>
+                <div class="ws-item ws-indent-1">📝 Index.md</div>
+                <div class="ws-item ws-indent-1">📂 Research</div>
+                <div class="ws-item ws-indent-2">📝 Note_1.md</div>
+                <div class="ws-item active">📝 Architecture.md <span class="ws-active-tag">Active</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Formulas & Diagrams (Normal, Row 2, Col 1) -->
+          <div class="bento-card">
+            <div class="bento-info">
+              <div class="bento-icon">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"></path>
+                </svg>
+              </div>
+              <h3>公式、图表与排版利器</h3>
+              <p>原生集成 KaTeX 高性能数学公式和 Mermaid 关系图谱。内置自动目录(TOC)与多媒体管理器，完美支撑学术与技术写作。</p>
+            </div>
+            <div class="graphic-formula-watermark">
+              \sum_{i=1}^n i
+            </div>
+          </div>
+
+          <!-- Card 4: Desktop Shell (Normal, Row 2, Col 2) -->
+          <div class="bento-card">
+            <div class="bento-info">
+              <div class="bento-icon">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25"></path>
+                </svg>
+              </div>
+              <h3>深度系统级原生集成</h3>
+              <p>基于 Tauri 2.0 开发。实现 Windows 文件类型关联、独占图标与资源管理器右键新建 Markdown 动作。原生单例模式，双击打开外部文件自动复用已有进程，免除多开卡顿。</p>
+            </div>
+          </div>
+
+          <!-- Card 5: Pandoc converter (Large, Row 3, Col 1 & 2) -->
+          <div class="bento-card bento-card-large">
+            <div class="bento-info">
+              <div class="bento-icon">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7.5h-.75A2.25 2.25 0 004.5 9.75v7.5a2.25 2.25 0 002.25 2.25h7.5a2.25 2.25 0 002.25-2.25v-.75m-6 3h-.75A2.25 2.25 0 016 18V10.5A2.25 2.25 0 018.25 8.25h7.5A2.25 2.25 0 0118 10.5v.75m-2.25-4.5h.008v.008h-.008V6.75z"></path>
+                </svg>
+              </div>
+              <h3>跨格式大满贯流转 (Pandoc)</h3>
+              <p>深度集成行业级 Pandoc 转换器。无缝导入 Word (.docx)、HTML、TXT；支持一键导出 Markdown 捆绑包、单文件 HTML、PDF、Word 甚至精美思维导图，轻松融入团队协同流。</p>
+            </div>
+            <div class="bento-graphic-container">
+              <div class="graphic-pandoc-inline">
+                <div class="converter-badge word">Word</div>
+                <div class="converter-arrow">→</div>
+                <div class="converter-badge md">Markdown</div>
+                <div class="converter-arrow">→</div>
+                <div class="converter-badge pdf">PDF</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 6: Customization (Normal, Row 3, Col 3) -->
+          <div class="bento-card">
+            <div class="bento-info">
+              <div class="bento-icon">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.43l-1.003.828c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.43l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+              </div>
+              <h3>全维度个性化定制</h3>
+              <p>支持自适应字数实时统计、多套精致快捷键。首选项支持完全自定义 API Endpoint 密钥与网络连接，打造最顺手好用的专属笔记站。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Deep Dive 1: Clipboard Architecture -->
+      <section id="clipboard-deepdive" class="section deep-dive scroll-reveal">
+        <div class="deep-dive-grid">
+          <div class="deep-dive-content">
+            <div class="hero-tag" style="margin-bottom: 1rem;">独家秘籍</div>
+            <h3>首创剪贴板四阶段架构</h3>
+            <p>从外面复制内容进编辑器总是格式全乱？FluxMobius 重新设计了整个系统的粘贴链路。通过“影子剪贴板”与“智能匹配链”，我们实现了近乎魔法般的高保真格式粘贴，彻底杜绝富文本样式垃圾的滋生。</p>
+            
+            <ul class="deep-dive-steps">
+              <li class="deep-dive-step">
+                <div class="step-number">1</div>
+                <div class="step-info">
+                  <h4>Copy/Cut 双写缓存</h4>
+                  <p>应用内复制时，同时写入系统剪贴板（跨应用共享）与“影子剪贴板（Shadow Clipboard）”。影子剪贴板存储带完整 ProseMirror 结构的节点切片，保障内部无损流转。</p>
+                </div>
+              </li>
+              <li class="deep-dive-step">
+                <div class="step-number">2</div>
+                <div class="step-info">
+                  <h4>双入口流控 (Tauri + Web)</h4>
+                  <p>无缝支持原生 Web 粘贴事件与 Tauri Command 异步通道，确保多端和高权限下复制剪切动作的流畅触发与历史栈保存。</p>
+                </div>
+              </li>
+              <li class="deep-dive-step">
+                <div class="step-number">3</div>
+                <div class="step-info">
+                  <h4>智能匹配器与伪富文本过滤</h4>
+                  <p>智能判定内容属性。如果检测到公式、HTML 块或代码块，立即用匹配器转换。自动过滤 VS Code/Office 复制带来的语法高亮颜色背景等无语义伪富文本垃圾标签。</p>
+                </div>
+              </li>
+              <li class="deep-dive-step">
+                <div class="step-number">4</div>
+                <div class="step-info">
+                  <h4>粘贴后自适应归一化</h4>
+                  <p>自动优化节点结构：将独立的内联公式段落自动转换为块级公式卡片并自动在光标后补空行，若光标处于空段落则直接智能替换而非追加，免去手动删改烦恼。</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Interactive Flow Panel -->
+          <div class="flow-diagram-container">
+            <h4 style="font-family: 'Outfit', sans-serif; font-weight: 700; margin-bottom: 0.5rem;">点击体验数据在剪贴板中的流转处理</h4>
+            
+            <div id="flow-pill-1" class="flow-step-pill active" onclick="activateFlowStep(1)">
+              <div class="flow-step-badge">1</div>
+              <div class="flow-step-text">
+                <h5>用户执行复制/剪切操作</h5>
+                <p>将 ProseMirror Slice 状态双写到影子剪贴板中</p>
+              </div>
+            </div>
+
+            <div id="flow-pill-2" class="flow-step-pill" onclick="activateFlowStep(2)">
+              <div class="flow-step-badge">2</div>
+              <div class="flow-step-text">
+                <h5>解析粘贴源并拦截事件</h5>
+                <p>检测 HTML 中是否包含无语义的伪富文本（CSS style 样式等）</p>
+              </div>
+            </div>
+
+            <div id="flow-pill-3" class="flow-step-pill" onclick="activateFlowStep(3)">
+              <div class="flow-step-badge">3</div>
+              <div class="flow-step-text">
+                <h5>运行智能匹配器链</h5>
+                <p>检查内容是否为 KaTeX 公式、Mermaid 结构、HTML块或代码块并对应转译</p>
+              </div>
+            </div>
+
+            <div class="flow-status-panel">
+              <div class="flow-status-header">
+                <span class="status-dot"></span>
+                <span id="flow-status-title">剪贴板状态监控：待命中...</span>
+              </div>
+              <div id="flow-status-desc">影子剪贴板缓存处于待命状态。正在监视复制与剪贴板事务流...</div>
+              <div class="flow-status-code" id="flow-status-code-block">
+ShadowClipboard: {
+  plainText: "Welcome to FluxMobius",
+  slice: ProsemirrorSlice(nodes: 2),
+  kind: "selection"
+}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Deep Dive 2: AI Copilot -->
+      <section id="ai-deepdive" class="section scroll-reveal">
+        <div class="deep-dive-grid" style="grid-template-columns: 1.2fr 1fr;">
+          <!-- Visual Panel simulating AI features -->
+          <div class="flow-diagram-container" style="background: var(--bg-secondary);">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+              <span style="font-weight: 700; font-size:0.9rem; color:var(--text-primary);">🤖 AI 智写助手</span>
+              <span style="font-size:0.75rem; color:var(--text-secondary); background:rgba(168,85,247,0.1); padding:0.15rem 0.5rem; border-radius:99px; font-weight:600;">Stream Mode</span>
+            </div>
+            
+            <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; border-left: 2px solid #a855f7; padding-left: 0.75rem;">
+              <strong>输入文本：</strong><br>
+              我写了个Markdown的网站，感觉很简陋，我要把它重构成苹果风格的。
+            </div>
+            
+            <div style="margin: 0.5rem 0; font-size: 0.8rem; color: var(--text-muted);">
+              ⚡ 正在调用模型: <span style="color:var(--text-primary); font-weight:600;">Gemini-1.5-Pro</span> (进行 AI 润色)...
+            </div>
+
+            <div class="flow-status-code" style="min-height: 80px; margin: 0; background: var(--bg-primary);">
+              <span id="ai-stream-text" class="sim-ai-glow"></span>
+            </div>
+
+            <div style="display:flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.5rem;">
+              <button class="nav-btn" style="background:var(--border); color:var(--text-primary); border-radius: 6px; padding: 0.4rem 1rem;" onclick="triggerAiSim()">重新生成</button>
+              <button class="nav-btn" style="background:var(--accent-gradient); color:white; border-radius: 6px; padding: 0.4rem 1rem;">采纳建议 [Enter]</button>
+            </div>
+          </div>
+
+          <div class="deep-dive-content">
+            <div class="hero-tag" style="margin-bottom: 1rem; background: rgba(168, 85, 247, 0.1); color: #a855f7;">智慧涌现</div>
+            <h3>上下文感知的 AI 创作助理</h3>
+            <p>FluxMobius 并非简单拼接聊天框，而是将 AI 能力嵌入到了写作的每一个脉络中。通过全方位的内联快捷工具栏与专属 Service 层，让 AI 真正成为您的写作伴侣。</p>
+            
+            <ul class="deep-dive-steps">
+              <li class="deep-dive-step">
+                <div class="step-number" style="background: rgba(168, 85, 247, 0.1); color: #a855f7; border-color: rgba(168, 85, 247, 0.2);">✨</div>
+                <div class="step-info">
+                  <h4>选区级快速润色</h4>
+                  <p>选中文字瞬间弹出 AI 操作栏。支持智能润色、扩写、精简、翻译、修改语气，甚至是一键生成对应代码或逻辑图表。</p>
+                </div>
+              </li>
+              <li class="deep-dive-step">
+                <div class="step-number" style="background: rgba(168, 85, 247, 0.1); color: #a855f7; border-color: rgba(168, 85, 247, 0.2);">💬</div>
+                <div class="step-info">
+                  <h4>沉浸式侧边对话</h4>
+                  <p>随手召唤 AI 对话面板，让 AI 分析当前文档结构，自动解答知识点，或者根据文章框架生成思维导图。</p>
+                </div>
+              </li>
+              <li class="deep-dive-step">
+                <div class="step-number" style="background: rgba(168, 85, 247, 0.1); color: #a855f7; border-color: rgba(168, 85, 247, 0.2);">📊</div>
+                <div class="step-info">
+                  <h4>透明透明的 Token 用量与秘钥保护</h4>
+                  <p>内置 AI 用量统计面板，精细记录每一次调用的 Token 消耗和估计成本。秘钥直接通过 Tauri 系统安全接口加密保护，绝不上云。</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Performance Section -->
+      <section id="performance" class="section scroll-reveal">
+        <div class="perf-grid">
+          <div class="deep-dive-content">
+            <div class="hero-tag" style="margin-bottom: 1rem;">硬核指标</div>
+            <h3>轻量、敏捷，不妥协</h3>
+            <p>多数 Markdown 笔记软件由 Electron 构建，体积臃肿，内存居高不下。FluxMobius 采用 Rust 后端加 Tauri 2.0 框架，搭配高能的前端逻辑，让软件保持在羽量级状态。即使常驻后台，也几乎不占用任何系统资源。</p>
+          </div>
+
+          <!-- Apple Style Performance charts -->
+          <div class="perf-charts">
+            <!-- Metric 1 -->
+            <div class="chart-container">
+              <div class="chart-title">
+                <span>内存占用 (工作状态)</span>
+                <span>越小越好</span>
+              </div>
+              <div class="chart-bar-group">
+                <div class="chart-bar-row">
+                  <span class="chart-label">FluxMobius</span>
+                  <div class="chart-bar-wrapper">
+                    <div class="chart-bar-fill tauri" data-width="15%"></div>
+                  </div>
+                  <span class="chart-value">~25 MB</span>
+                </div>
+                <div class="chart-bar-row">
+                  <span class="chart-label">Electron 应用</span>
+                  <div class="chart-bar-wrapper">
+                    <div class="chart-bar-fill electron" data-width="90%"></div>
+                  </div>
+                  <span class="chart-value">~150+ MB</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Metric 2 -->
+            <div class="chart-container">
+              <div class="chart-title">
+                <span>安装包大小 (x64)</span>
+                <span>越小越好</span>
+              </div>
+              <div class="chart-bar-group">
+                <div class="chart-bar-row">
+                  <span class="chart-label">FluxMobius</span>
+                  <div class="chart-bar-wrapper">
+                    <div class="chart-bar-fill tauri" data-width="12%"></div>
+                  </div>
+                  <span class="chart-value">~12 MB</span>
+                </div>
+                <div class="chart-bar-row">
+                  <span class="chart-label">Electron 应用</span>
+                  <div class="chart-bar-wrapper">
+                    <div class="chart-bar-fill electron" data-width="85%"></div>
+                  </div>
+                  <span class="chart-value">~85+ MB</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Metric 3 -->
+            <div class="chart-container">
+              <div class="chart-title">
+                <span>冷启动时间</span>
+                <span>越快越好</span>
+              </div>
+              <div class="chart-bar-group">
+                <div class="chart-bar-row">
+                  <span class="chart-label">FluxMobius</span>
+                  <div class="chart-bar-wrapper">
+                    <div class="chart-bar-fill tauri" data-width="10%"></div>
+                  </div>
+                  <span class="chart-value">&lt; 0.5s</span>
+                </div>
+                <div class="chart-bar-row">
+                  <span class="chart-label">Electron 应用</span>
+                  <div class="chart-bar-wrapper">
+                    <div class="chart-bar-fill electron" data-width="70%"></div>
+                  </div>
+                  <span class="chart-value">~3.5s</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Download Center Section -->
+      <section id="download" class="section download-section scroll-reveal">
+        <div class="section-header">
+          <h2>即刻下载，轻装上阵</h2>
+          <p>FluxMobius 采用开源、安全的设计，全平台完美兼容，不向服务器上传任何私人笔记。</p>
+        </div>
+
+        <div class="download-grid">
+          <!-- Windows Card -->
+          <div class="download-card">
+            <svg class="os-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 3.449L9.75 2.1v9.45H0V3.449zM0 12.45h9.75v9.45L0 20.551v-8.1zM10.8 1.95L24 0v11.55H10.8V1.95zM10.8 12.45H24v11.55l-13.2-1.95v-9.6z"/>
+            </svg>
+            <h3>Windows</h3>
+            <p>Windows 10 / 11 (x64 / Arm64)</p>
+            <a href="https://github.com/undowhat/FluxMobius-Community/releases/download/v1.2.1/FluxMobius_0.1.0_x64-setup.exe" class="btn btn-primary" id="win-download-btn">
+              下载 .exe 安装包
+            </a>
+          </div>
+
+          <!-- macOS Card -->
+          <div class="download-card">
+            <svg class="os-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.2.67-2.92 1.49-.62.71-1.16 1.85-1.01 2.96 1.12.09 2.27-.58 2.94-1.39z"/>
+            </svg>
+            <h3>macOS</h3>
+            <p>macOS Big Sur 或更高版本 (Intel & Apple Silicon)</p>
+            <a href="https://github.com/undowhat/FluxMobius-Community/releases" class="btn btn-secondary" id="mac-download-btn">
+              前往 Releases 下载
+            </a>
+          </div>
+
+          <!-- Linux Card -->
+          <div class="download-card">
+            <svg class="os-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 .007c-.13 0-.27.01-.4.03-.66.08-1.28.43-1.68.97l-7.39 9.9c-.8.96-.8 2.33 0 3.29l7.39 9.9c.4.54 1.02.89 1.68.97.13.02.27.03.4.03s.27-.01.4-.03c.66-.08 1.28-.43 1.68-.97l7.39-9.9c.8-.96.8-2.33 0-3.29l-7.39-9.9c-.4-.54-1.02-.89-1.68-.97-.13-.02-.27-.03-.4-.03zm0 2.22c.24 0 .47.05.68.16.55.28.84.87.72 1.48l-.9 4.49 4.49-.9c.61-.12 1.2.17 1.48.72.28.55.17 1.22-.26 1.65l-6.21 6.21c-.43.43-1.1.54-1.65.26-.55-.28-.84-.87-.72-1.48l.9-4.49-4.49.9c-.61.12-1.2-.17-1.48-.72-.28-.55-.17-1.22.26-1.65l6.21-6.21c.21-.21.48-.32.77-.32z"/>
+            </svg>
+            <h3>Linux</h3>
+            <p>Debian / Ubuntu / AppImage</p>
+            <a href="https://github.com/undowhat/FluxMobius-Community/releases" class="btn btn-secondary" id="linux-download-btn">
+              前往 Releases 下载
+            </a>
+          </div>
+        </div>
+
+        <div class="pandoc-tip scroll-reveal">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+          </svg>
+          <div>
+            <strong>Pandoc 格式转换小贴士</strong>：Word导入导出、TXT语义化转换依赖本地的 <code>Pandoc</code> 转换工具。FluxMobius 会自动读取“首选项 > 转换”中指定的 <code>pandoc.exe</code>；如果未填，系统会尝试自动读取系统 <code>PATH</code> 环境变量。
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+      <div class="footer-container">
+        <div class="footer-links">
+          <a href="https://github.com/undowhat/FluxMobius-Community" target="_blank" rel="noopener noreferrer">GitHub 主页</a>
+          <a href="https://github.com/undowhat/FluxMobius-Community/issues" target="_blank" rel="noopener noreferrer">Bug 反馈与建议</a>
+          <a href="https://github.com/undowhat/FluxMobius-Community/releases" target="_blank" rel="noopener noreferrer">版本发布历史</a>
+        </div>
+        <div class="logo-group" style="opacity: 0.6;">
+          <svg class="logo-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <path d="M50 15 C 20 15, 10 35, 10 50 C 10 65, 20 85, 50 85 C 80 85, 90 65, 90 50 C 90 35, 80 15, 50 15 Z M 50 25 C 72 25, 80 40, 80 50 C 80 60, 72 75, 50 75 C 28 75, 20 60, 20 50 C 20 40, 28 25, 50 25 Z" fill-rule="evenodd"/>
+            <path d="M30 50 Q 50 20 70 50 T 30 50" fill="none" stroke-width="6" stroke="url(#logo-grad-footer)"/>
+            <defs>
+              <linearGradient id="logo-grad-footer" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#0071e3" />
+                <stop offset="100%" stop-color="#a855f7" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <span style="font-size: 1rem;">FluxMobius</span>
+        </div>
+        <p class="copyright">© 2026 FluxMobius. Built with Tauri & Vue. 开源免费，本地优先。</p>
+      </div>
+    </footer>
+
+    <!-- Interactive Logic Script -->
+    <script>
+      // --- Theme Toggle Logic ---
+      const themeToggleBtn = document.getElementById('theme-toggle-btn');
+      const sunIcon = document.getElementById('sun-icon');
+      const moonIcon = document.getElementById('moon-icon');
+      const htmlEl = document.documentElement;
+
+      // Check system preference
+      const getSystemTheme = () => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      
+      const setTheme = (theme) => {
+        htmlEl.setAttribute('data-theme', theme);
+        if (theme === 'dark') {
+          sunIcon.style.display = 'block';
+          moonIcon.style.display = 'none';
+        } else {
+          sunIcon.style.display = 'none';
+          moonIcon.style.display = 'block';
+        }
+        localStorage.setItem('fluxmobius-theme', theme);
+      };
+
+      // Initial Theme
+      const savedTheme = localStorage.getItem('fluxmobius-theme') || getSystemTheme();
+      setTheme(savedTheme);
+
+      themeToggleBtn.addEventListener('click', () => {
+        const currentTheme = htmlEl.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        setTheme(newTheme);
+      });
+
+      // --- Scroll Reveal Animations ---
+      const reveals = document.querySelectorAll('.scroll-reveal');
+      const checkReveal = () => {
+        const triggerBottom = window.innerHeight * 0.85;
+        reveals.forEach(reveal => {
+          const revealTop = reveal.getBoundingClientRect().top;
+          if (revealTop < triggerBottom) {
+            reveal.classList.add('revealed');
+            
+            // If this is the performance section, trigger bar animations
+            if (reveal.id === 'performance') {
+              animatePerfBars();
+            }
+          }
+        });
+      };
+
+      const animatePerfBars = () => {
+        const bars = document.querySelectorAll('.chart-bar-fill');
+        bars.forEach(bar => {
+          const width = bar.getAttribute('data-width');
+          bar.style.width = width;
+        });
+      };
+
+      window.addEventListener('scroll', checkReveal);
+      window.addEventListener('load', checkReveal);
+
+
+      // --- Simulator Content Data & Scenarios ---
+      const simulatorContent = document.getElementById('simulator-content');
+      let currentTab = 'wysiwyg';
+      let currentFile = 'welcome';
+      let simTimeoutId = null;
+
+      const clearSimulator = () => {
+        if (simTimeoutId) {
+          clearTimeout(simTimeoutId);
+          simTimeoutId = null;
+        }
+        simulatorContent.innerHTML = '';
+      };
+
+      // SCENARIO 1: WYSIWYG typing & rendering
+      const runWysiwygScenario = () => {
+        clearSimulator();
+        
+        const container = document.createElement('div');
+        container.style.display = 'flex';
+        container.style.flexDirection = 'column';
+        container.style.gap = '0.5rem';
+        
+        const editorLine = document.createElement('div');
+        editorLine.className = 'typing';
+        editorLine.style.fontFamily = 'monospace';
+        editorLine.style.fontSize = '0.9rem';
+        editorLine.style.color = 'var(--text-secondary)';
+        container.appendChild(editorLine);
+        simulatorContent.appendChild(container);
+        
+        const script = [
+          { type: 'type', text: '# 极简主义创作中心\n\n', delay: 40 },
+          { type: 'render-h1', text: '极简主义创作中心' },
+          { type: 'type', text: '这是基于 Milkdown 的所见即所得体验。内置智能 Katex 公式节点：\n\n', delay: 30 },
+          { type: 'render-p', text: '这是基于 Milkdown 的所见即所得体验。内置智能 Katex 公式节点：' },
+          { type: 'type', text: '$$\\sum_{i=1}^n i = \\frac{n(n+1)}{2}$$\n\n', delay: 40 },
+          { type: 'render-math', text: '\\sum_{i=1}^n i = \\frac{n(n+1)}{2}' },
+          { type: 'type', text: '打字完毕，一切都在毫秒级实时转换，无需预览窗口！', delay: 30 },
+          { type: 'render-p2', text: '打字完毕，一切都在毫秒级实时转换，无需预览窗口！' }
+        ];
+        
+        let step = 0;
+        
+        const executeStep = () => {
+          if (step >= script.length) {
+            // Loop scenario after 4s
+            simTimeoutId = setTimeout(runWysiwygScenario, 4000);
+            return;
+          }
+          
+          const current = script[step];
+          if (current.type === 'type') {
+            let charIndex = 0;
+            const typeChar = () => {
+              if (charIndex < current.text.length) {
+                editorLine.textContent += current.text[charIndex];
+                charIndex++;
+                simTimeoutId = setTimeout(typeChar, current.delay);
+              } else {
+                step++;
+                simTimeoutId = setTimeout(executeStep, 400);
+              }
+            };
+            typeChar();
+          } else if (current.type === 'render-h1') {
+            editorLine.textContent = '';
+            const h1 = document.createElement('h1');
+            h1.className = 'sim-preview-h1';
+            h1.textContent = current.text;
+            container.insertBefore(h1, editorLine);
+            step++;
+            executeStep();
+          } else if (current.type === 'render-p') {
+            editorLine.textContent = '';
+            const p = document.createElement('p');
+            p.className = 'sim-preview-p';
+            p.textContent = current.text;
+            container.insertBefore(p, editorLine);
+            step++;
+            executeStep();
+          } else if (current.type === 'render-math') {
+            editorLine.textContent = '';
+            const math = document.createElement('div');
+            math.className = 'sim-preview-math';
+            math.innerHTML = `$$\\text{KaTeX}: ${current.text}$$`;
+            container.insertBefore(math, editorLine);
+            step++;
+            simTimeoutId = setTimeout(executeStep, 600);
+          } else if (current.type === 'render-p2') {
+            editorLine.textContent = '';
+            editorLine.className = ''; // remove cursor
+            const p2 = document.createElement('p');
+            p2.className = 'sim-preview-p';
+            p2.style.fontWeight = '500';
+            p2.style.color = 'var(--accent)';
+            p2.textContent = current.text;
+            container.appendChild(p2);
+            step++;
+            executeStep();
+          }
+        };
+        
+        executeStep();
+      };
+
+      // SCENARIO 2: AI Inline Editing
+      const runAiScenario = () => {
+        clearSimulator();
+        
+        const container = document.createElement('div');
+        container.style.lineHeight = '1.8';
+        
+        const prefix = document.createTextNode('在撰写文章时，我们可以随时调用内置 AI 工作流。例如选中这段话：');
+        container.appendChild(prefix);
+        container.appendChild(document.createElement('br'));
+        container.appendChild(document.createElement('br'));
+        
+        const selectionSpan = document.createElement('span');
+        selectionSpan.textContent = '我开发了这个编辑器，它的粘贴功能非常好用，可以过滤脏数据，也可以渲染数学公式。';
+        container.appendChild(selectionSpan);
+        
+        simulatorContent.appendChild(container);
+        
+        // Step 1: Simulate selection highlighting
+        simTimeoutId = setTimeout(() => {
+          selectionSpan.className = 'sim-ai-selection';
+          
+          // Step 2: Show floating AI toolbar
+          const toolbar = document.createElement('div');
+          toolbar.className = 'sim-ai-toolbar';
+          toolbar.innerHTML = `
+            <button class="sim-ai-btn highlight">✨ AI 润色</button>
+            <button class="sim-ai-btn">🌐 翻译</button>
+            <button class="sim-ai-btn">✏️ 扩写</button>
+          `;
+          container.appendChild(toolbar);
+          
+          // Step 3: Trigger click pulse on AI polish
+          simTimeoutId = setTimeout(() => {
+            const btn = toolbar.querySelector('.highlight');
+            btn.style.transform = 'scale(0.95)';
+            btn.style.boxShadow = '0 0 10px #a855f7';
+            
+            // Step 4: Show streaming response block
+            simTimeoutId = setTimeout(() => {
+              toolbar.style.opacity = '0';
+              selectionSpan.className = ''; // remove selection color
+              
+              const chatBubble = document.createElement('div');
+              chatBubble.className = 'sim-ai-chat-bubble';
+              chatBubble.innerHTML = `
+                <div style="font-weight:700; color:#a855f7; margin-bottom:0.5rem; font-size:0.75rem; text-transform:uppercase;">AI 智能润色方案：</div>
+                <div class="sim-ai-streaming"></div>
+              `;
+              container.appendChild(chatBubble);
+              
+              const targetText = "本编辑器倾力首创了“四阶段剪贴板架构”，可全自动过滤外部高亮代码块中的无语义富文本垃圾，并高保真还原数学公式与复杂表格等排版结构。";
+              const streamingTextEl = chatBubble.querySelector('.sim-ai-streaming');
+              
+              let charIndex = 0;
+              const streamChars = () => {
+                if (charIndex < targetText.length) {
+                  // highlight stream text with nice glow effect
+                  streamingTextEl.innerHTML = `<span class="sim-ai-glow">${targetText.substring(0, charIndex)}</span>${targetText[charIndex]}`;
+                  charIndex++;
+                  simTimeoutId = setTimeout(streamChars, 40);
+                } else {
+                  streamingTextEl.innerHTML = `<span class="sim-ai-glow">${targetText}</span> ✅`;
+                  // Loop after 5s
+                  simTimeoutId = setTimeout(runAiScenario, 5000);
+                }
+              };
+              streamChars();
+              
+            }, 600);
+          }, 1200);
+        }, 1000);
+      };
+
+      // SCENARIO 3: Clean Paste Pipeline
+      const runPasteScenario = () => {
+        clearSimulator();
+        
+        const grid = document.createElement('div');
+        grid.className = 'sim-paste-grid';
+        grid.innerHTML = `
+          <!-- VS Code Source -->
+          <div class="sim-paste-col left">
+            <div class="col-title">📄 VS Code (复制源)</div>
+            <div style="color: #6a9955; margin-bottom: 0.5rem;">// 带语法高亮与背景样式的富文本</div>
+            <div style="background: #1e1e1e; padding: 0.75rem; border-radius:6px; color: #d4d4d4;">
+              <span style="color:#569cd6;">&lt;span</span> <span style="color:#9cdcfe;">style</span>=<span style="color:#ce9178;">"color:#ff0000; font-weight:bold; background-color:#fff;"</span><span style="color:#569cd6;">&gt;</span>
+              <br>&nbsp;&nbsp;$$\\int_a^b f(x)dx = F(b) - F(a)$$
+              <br><span style="color:#569cd6;">&lt;/span&gt;</span>
+            </div>
+            <div style="margin-top: 1rem; color: #86868b; text-align: center;" id="paste-action-indicator">
+              👉 正在复制...
+            </div>
+          </div>
+
+          <!-- Flow Engine -->
+          <div class="sim-paste-flow-arrow">
+            <div class="paste-clean-indicator" id="paste-clean-flag" style="opacity: 0;">样式过滤已拦截</div>
+            <div class="arrow-pipe">
+              <span class="pipe-pulse"></span>
+            </div>
+            <div style="font-size:0.65rem; font-weight:600; color:var(--text-secondary);">Smart Filter</div>
+          </div>
+
+          <!-- FluxMobius Editor -->
+          <div class="sim-paste-col right">
+            <div class="col-title">📝 FluxMobius (高保真粘帖)</div>
+            <div id="target-paste-editor" style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+              <div style="color:var(--text-muted); font-size:0.8rem;" id="paste-placeholder">等待粘贴数据输入...</div>
+            </div>
+          </div>
+        `;
+        
+        simulatorContent.appendChild(grid);
+        
+        const actionInd = document.getElementById('paste-action-indicator');
+        const cleanFlag = document.getElementById('paste-clean-flag');
+        const targetEditor = document.getElementById('target-paste-editor');
+        
+        // Stage 1: Copy
+        simTimeoutId = setTimeout(() => {
+          actionInd.textContent = "⚡ 触发粘贴 [Ctrl + V]!";
+          actionInd.style.color = "var(--accent)";
+          
+          // Stage 2: Arrow flow & filter indicator
+          simTimeoutId = setTimeout(() => {
+            cleanFlag.style.opacity = '1';
+            
+            // Stage 3: Clean Paste Render
+            simTimeoutId = setTimeout(() => {
+              targetEditor.innerHTML = `
+                <div class="sim-preview-math sim-paste-node" style="animation-delay: 0s; font-size:1.1rem; width:100%; border:1px solid var(--accent);">
+                  \\int_a^b f(x)dx = F(b) - F(a)
+                </div>
+                <div style="font-size:0.7rem; color:#34c759; margin-top:0.5rem;" class="sim-paste-node">
+                  ✨ 自动识别为数学公式块并清洗多余背景色样式！
+                </div>
+              `;
+              
+              // Trigger animations
+              const nodes = targetEditor.querySelectorAll('.sim-paste-node');
+              nodes.forEach(node => {
+                node.style.opacity = '1';
+                node.style.transform = 'translateY(0)';
+                node.style.transition = 'all 0.5s ease';
+              });
+              
+              // Loop after 5s
+              simTimeoutId = setTimeout(runPasteScenario, 5000);
+            }, 800);
+          }, 1000);
+        }, 1500);
+      };
+
+      // Switch Tab Router
+      const switchSimulatorTab = (tab) => {
+        currentTab = tab;
+        
+        // Update Buttons
+        document.querySelectorAll('.sim-tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`tab-${tab}`).classList.add('active');
+        
+        // File Tree activation follow
+        document.querySelectorAll('.sidebar-list li').forEach(li => li.classList.remove('active'));
+        if (tab === 'wysiwyg') {
+          document.getElementById('sim-file-welcome').classList.add('active');
+          document.getElementById('sim-window-title').textContent = "FluxMobius — docs/Welcome.md";
+          runWysiwygScenario();
+        } else if (tab === 'ai') {
+          document.getElementById('sim-file-math').classList.add('active');
+          document.getElementById('sim-window-title').textContent = "FluxMobius — docs/Math_Notes.md";
+          runAiScenario();
+        } else {
+          document.getElementById('sim-file-code').classList.add('active');
+          document.getElementById('sim-window-title').textContent = "FluxMobius — docs/Sandbox.py";
+          runPasteScenario();
+        }
+      };
+
+      // File click inside Simulator Window
+      const switchSimFile = (file) => {
+        if (file === 'welcome') switchSimulatorTab('wysiwyg');
+        else if (file === 'math') switchSimulatorTab('ai');
+        else switchSimulatorTab('paste');
+      };
+
+      // Default run
+      runWysiwygScenario();
+
+
+      // --- Flow Deep Dive Panel Interaction ---
+      const flowSteps = [
+        {
+          title: "双写缓存机制",
+          desc: "复制动作触发时，拦截系统剪贴板，生成ProseMirror Slice结构存入影子剪贴板，同时写入跨应用明文。",
+          code: "ShadowClipboardState: {\n  plainText: \"[Copied Math Formula]\",\n  slice: PM_Slice(node: \"math_block\"),\n  kind: \"selection\",\n  createdAt: 1716474137580\n}"
+        },
+        {
+          title: "双入口合并流控",
+          desc: "无论用户使用 Ctrl+V 触发，还是通过菜单右键动作触发，皆汇入 handleSmartPaste 统一进行逻辑筛选。",
+          code: "handleSmartPaste(text, html, files, source) {\n  if (source === 'command') restoreEditorSelection();\n  // 进入优先级筛选器...\n}"
+        },
+        {
+          title: "智能匹配器链过滤",
+          desc: "根据规则深度扫描，过滤伪富文本（Monaco, VS Code, Word自带的无语义CSS高亮），识别出公式、Mermaid代码后安全插入。",
+          code: "isPseudoRichClipboardHtml(html) => true\n=> Intercepted! Parse HTML to clean Markdown text\n=> Inserted as Code Block [JS]"
+        }
+      ];
+
+      const activateFlowStep = (stepNumber) => {
+        // Update Active Pills
+        document.querySelectorAll('.flow-step-pill').forEach(pill => pill.classList.remove('active'));
+        document.getElementById(`flow-pill-${stepNumber}`).classList.add('active');
+
+        // Update Panel Data
+        const step = flowSteps[stepNumber - 1];
+        document.getElementById('flow-status-title').textContent = `剪贴板流程状态：第 ${stepNumber} 阶段 — ${step.title}`;
+        document.getElementById('flow-status-desc').textContent = step.desc;
+        document.getElementById('flow-status-code-block').textContent = step.code;
+      };
+
+
+      // --- AI Dialog Streaming Demo ---
+      const aiStreamingTextEl = document.getElementById('ai-stream-text');
+      let aiSimTimeoutId = null;
+
+      const triggerAiSim = () => {
+        if (aiSimTimeoutId) clearTimeout(aiSimTimeoutId);
+        
+        aiStreamingTextEl.textContent = '';
+        const aiText = "FluxMobius 是一款致力于本地优先的极简主义 Markdown 笔记工作站，为用户呈献极致流畅的沉浸式创作体验。";
+        let idx = 0;
+        
+        const stream = () => {
+          if (idx < aiText.length) {
+            aiStreamingTextEl.textContent += aiText[idx];
+            idx++;
+            aiSimTimeoutId = setTimeout(stream, 50);
+          } else {
+            aiStreamingTextEl.textContent = aiText + "  ✨ [已润色]";
+          }
+        };
+        stream();
+      };
+      
+      // Trigger initially
+      triggerAiSim();
+    </script>
+  </body>
+</html>
